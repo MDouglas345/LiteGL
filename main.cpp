@@ -4,8 +4,7 @@
 int main(void)
 {
     lit::LiteGL Renderer("Test Window", 1280, 720);
-
-
+   
 
     /* Loop until the user closes the window */
     while (!Renderer.ShouldWindowClose())
@@ -21,6 +20,6 @@ int main(void)
     }
 
     Renderer.EndRenderer();
-    
+
     return 0;
 }

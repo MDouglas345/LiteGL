@@ -11,7 +11,7 @@ if (plat == 'Darwin'):
     env['FRAMEWORKS'] = ['OpenGL']
     env.Append(CPPPATH = 'include')
     env.Append(LIBPATH = ['./libs/MACOSX'])
-    env.Append(LIBS = ['libglfw.3.dylib', 'libGLEW.dylib'])
+    env.Append(LIBS = ['libglfw.3.dylib','GLEW'])
 else:
     env.Append(CPPPATH = 'include')
     env.Append(LIBPATH = ['./libs/Debug'])

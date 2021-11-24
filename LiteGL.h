@@ -74,8 +74,7 @@ namespace lit{
         public:
         Shader(char* fileloc, std::string localname) : Name(localname){
             ReadFile(fileloc);
-            CompileShader();
-            VerifyShader();
+            
         }
         void ReadFile(char* file){
             std::ifstream ShaderStream(file, std::ios::in);
@@ -108,39 +107,48 @@ namespace lit{
         virtual void CompileShader () = 0;
     };
 
+    /*
+        Should make an automated uniform detection
+    */
     class VertexShader : public Shader{
         public:
         VertexShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-
+            CompileShader();
+            VerifyShader();
         }
         void CompileShader() override{
             m_ID = glCreateShader(GL_VERTEX_SHADER);
             char const * ShaderSourcePointer = ShaderCode.c_str();
             glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
+            glCompileShader(m_ID);
         }
     };
 
     class FragmentShader : public Shader{
         public:
         FragmentShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-            
+            CompileShader();
+            VerifyShader();  
         }
          void CompileShader() override{
              m_ID = glCreateShader(GL_FRAGMENT_SHADER);
             char const * ShaderSourcePointer = ShaderCode.c_str();
             glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
+            glCompileShader(m_ID);
         }
     };
 
     class ComputeShader : public Shader{
         public:
         ComputeShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-            
+            CompileShader();
+            VerifyShader();
         }
          void CompileShader() override{
             m_ID = glCreateShader(GL_COMPUTE_SHADER);
             char const * ShaderSourcePointer = ShaderCode.c_str();
             glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
+            glCompileShader(m_ID);
         }
     };
 
@@ -150,8 +158,12 @@ namespace lit{
 
         public:
         ShaderProgram(GLuint VertexShader, GLuint FragmentShader){
-
+            m_ID = glCreateProgram();
+            glAttachShader(m_ID, VertexShader);
+            glAttachShader(m_ID, FragmentShader);
+            glLinkProgram(m_ID);
         }
+
     };
 
    
@@ -166,6 +178,7 @@ namespace lit{
     std::string m_WindowName;
     int m_WindowHeight;
     int m_WindowLength;
+    GLFWimage WindowIcon;
 
     /*
         TEXTURE VARIABLES
@@ -180,10 +193,14 @@ namespace lit{
             std::cout << "Failed to init GLFW, nothing will continue./n";
             return;
         }
+        
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        WindowIcon.pixels = stbi_load("LiteGLIcon.png", &WindowIcon.width, &WindowIcon.height, 0, 4);
+        glfwSetWindowIcon(m_Window, 1, &WindowIcon);
 
          m_Window = glfwCreateWindow(wl, wh, name.c_str(), NULL, NULL);
 
@@ -192,6 +209,9 @@ namespace lit{
          }
 
          glfwMakeContextCurrent(m_Window);
+
+        glewExperimental = GL_TRUE;
+        glewInit();
     }
 
     bool ShouldWindowClose(){
