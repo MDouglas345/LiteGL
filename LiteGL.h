@@ -180,9 +180,10 @@ namespace lit{
             std::cout << "Failed to init GLFW, nothing will continue./n";
             return;
         }
-
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
          m_Window = glfwCreateWindow(wl, wh, name.c_str(), NULL, NULL);
 
