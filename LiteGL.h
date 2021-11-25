@@ -30,15 +30,48 @@ namespace lit{
         glfwTerminate();
     }
 
+    class GLobject{
+        protected:
+        GLuint m_ID;
 
-     class Texture{
+        public:
+        GLobject(){}
+    };
+
+    class VertexArrayObject : public GLobject{
         private:
-            GLuint m_ID;
+
+        public:
+        VertexArrayObject() : GLobject(){
+            glGenVertexArrays(1, &m_ID);
+        }
+
+        void BindVAO(){
+            glBindVertexArray(m_ID);
+        }
+    };
+
+    class VertexBufferObject : public GLobject{
+        private:
+
+        public:
+        VertexBufferObject() : GLobject(){
+            glGenBuffers(1, &m_ID);
+        }
+
+        void BindVBO(){
+            glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+        }
+    };
+
+
+     class Texture : public GLobject{
+        private:
             int m_Width, m_Height,nrChannels;
             unsigned char* m_Data;
             std::string Name;
         public:
-        Texture(std::string FileLoc, std::string localname) : Name(localname){
+        Texture(std::string FileLoc, std::string localname) : GLobject(), Name(localname){
             glGenTextures(1, &m_ID);
             glBindTexture(GL_TEXTURE_2D, m_ID);
 
@@ -66,15 +99,17 @@ namespace lit{
         }
     };
 
-    class Shader{
+    class Shader : public GLobject{
         protected:
-            GLuint m_ID;
             std::string Name;
             std::string ShaderCode;
         public:
-        Shader(char* fileloc, std::string localname) : Name(localname){
+        Shader(char* fileloc, std::string localname) : GLobject(), Name(localname){
             ReadFile(fileloc);
             
+        }
+        GLuint getID(){
+            return m_ID;
         }
         void ReadFile(char* file){
             std::ifstream ShaderStream(file, std::ios::in);
@@ -152,16 +187,38 @@ namespace lit{
         }
     };
 
-    class ShaderProgram{
+    class ShaderProgram : public GLobject{
         private:
-        GLuint m_ID;
+        GLuint vertShaderID, fragShaderID;
+        VertexShader* vertShader;
+        FragmentShader*  fragShader;
 
         public:
-        ShaderProgram(GLuint VertexShader, GLuint FragmentShader){
+        ShaderProgram(GLuint vert, GLuint frag) : GLobject(){
             m_ID = glCreateProgram();
-            glAttachShader(m_ID, VertexShader);
-            glAttachShader(m_ID, FragmentShader);
+            glAttachShader(m_ID, vert);
+            glAttachShader(m_ID, frag);
             glLinkProgram(m_ID);
+        }
+        ShaderProgram(char* vertexshader, char* fragementshader){
+            m_ID = glCreateProgram();
+            vertShader = new VertexShader(vertexshader, "vert");
+            fragShader = new FragmentShader(fragementshader, "frag");
+
+            vertShaderID = vertShader->getID();
+            fragShaderID = fragShader->getID();
+        }
+
+        int GetUniformLocation(char* uni){
+            return glGetUniformLocation(m_ID, uni);
+        }
+
+        void UseProgram(){
+            glUseProgram(m_ID);
+        }
+
+        GLuint GetShaderID(){
+            return m_ID;
         }
 
     };
