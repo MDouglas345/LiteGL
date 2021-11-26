@@ -22,7 +22,7 @@ else:
 createStatic = ARGUMENTS.get('static', 0)
 t = 0
 if (createStatic):
-    t = env.StaticLibrary('LiteGL', ['LiteGL.cpp'])
+    t = env.StaticLibrary('LiteGL', ['LiteGL.cpp', 'LiteGL.h'])
 else:
     t = env.Program(target = 'main', source =['main.cpp'])
 Default(t)

@@ -47,9 +47,7 @@ namespace lit{
 
         public:
             GLobject(){}
-            GLuint getID(){
-                return m_ID;
-            }
+            GLuint getID();
     };
 
     class VertexBufferObject : public GLobject{
