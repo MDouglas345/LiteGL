@@ -7,9 +7,20 @@
     LiteGL should store the unique ID for each Texture in a vector for quick lookup and allocation into shader programs.
 */
 
+/*
+    Note about VAOs, VBOs, and Shaders :
+    I designed this workflow where the mesh/object dictates what the shader should have.
+    Meaning that a Mesh will contain vertex types (positions, normals, uvs, etc) and the VBOs will be created accordingly.
+    The VAOs will follow suite, meaning that there is an implicit compatibility check between the VAO and the current shader to be used.
+
+*/
+
+//TODO : Convert this whole summa into a .h and .cpp file. For Static Libary purposes.
+
 #ifndef LITEGL_H
 #define LITEGL_H
 
+#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <memory>
@@ -32,35 +43,64 @@ namespace lit{
 
     class GLobject{
         protected:
-        GLuint m_ID;
+            GLuint m_ID;
 
         public:
-        GLobject(){}
-    };
-
-    class VertexArrayObject : public GLobject{
-        private:
-
-        public:
-        VertexArrayObject() : GLobject(){
-            glGenVertexArrays(1, &m_ID);
-        }
-
-        void BindVAO(){
-            glBindVertexArray(m_ID);
-        }
+            GLobject(){}
+            GLuint getID(){
+                return m_ID;
+            }
     };
 
     class VertexBufferObject : public GLobject{
-        private:
-
+        protected:
+            GLenum m_DrawType;
+            void* m_Data;
+            size_t m_Stride;
+            unsigned int m_DataType;
         public:
-        VertexBufferObject() : GLobject(){
-            glGenBuffers(1, &m_ID);
+            VertexBufferObject() : GLobject(){
+                glGenBuffers(1, &m_ID);
+            }
+
+        void AssignData(size_t BufferSize, size_t stride, unsigned int DataType, void* Data){
+            BindVBO();
+            glBufferData(GL_ARRAY_BUFFER, BufferSize, Data, m_DrawType);
+            m_Data = Data;
+            m_Stride = stride;
+            m_DataType = DataType;
         }
 
         void BindVBO(){
             glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+        }
+
+        size_t getStride(){
+            return m_Stride;
+        }
+
+        unsigned int getDataType(){
+            return m_DataType;
+        }
+    };
+
+    class VertexArrayObject : public GLobject{
+        private:
+            std::vector<size_t> Attribs;
+        public:
+            VertexArrayObject() : GLobject(){
+             glGenVertexArrays(1, &m_ID);
+            }
+        
+        void AssignVBO(size_t index, VertexBufferObject* Buffer){
+            BindVAO();
+            Buffer->BindVBO();
+            glVertexAttribPointer(index, Buffer->getStride(), Buffer->getDataType(), GL_FALSE, 0, NULL);
+            Attribs.push_back(index);
+        }
+
+        void BindVAO(){
+            glBindVertexArray(m_ID);
         }
     };
 
@@ -71,46 +111,47 @@ namespace lit{
             unsigned char* m_Data;
             std::string Name;
         public:
-        Texture(std::string FileLoc, std::string localname) : GLobject(), Name(localname){
-            glGenTextures(1, &m_ID);
-            glBindTexture(GL_TEXTURE_2D, m_ID);
+            Texture(std::string FileLoc, std::string localname) : GLobject(), Name(localname){
+                glGenTextures(1, &m_ID);
+                glBindTexture(GL_TEXTURE_2D, m_ID);
 
-            /*
-                Need to add texture customizability, either through functions or inheritance
-            */
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            m_Data = stbi_load(FileLoc.c_str(), &m_Width, &m_Height, &nrChannels, 0);
-
-            if (m_Data){
                 /*
-                    Lots can be worked on for customizability!!!
+                    Need to add texture customizability, either through functions or inheritance
                 */
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, m_Data);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+                m_Data = stbi_load(FileLoc.c_str(), &m_Width, &m_Height, &nrChannels, 0);
+
+                if (m_Data){
+                    /*
+                        Lots can be worked on for customizability!!!
+                    */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, m_Data);
+                }
+                else{
+                    std::string exit = "Failed to load Texture ";
+                    exit += localname;
+                    ExitGracefully(exit.c_str());
+                }
             }
-            else{
-                std::string exit = "Failed to load Texture ";
-                exit += localname;
-                ExitGracefully(exit.c_str());
-            }
-        }
     };
+    
+    namespace obj{
+
+    }
 
     class Shader : public GLobject{
         protected:
             std::string Name;
             std::string ShaderCode;
         public:
-        Shader(char* fileloc, std::string localname) : GLobject(), Name(localname){
-            ReadFile(fileloc);
+            Shader(char* fileloc, std::string localname) : GLobject(), Name(localname){
+                ReadFile(fileloc);
             
-        }
-        GLuint getID(){
-            return m_ID;
-        }
+            }
         void ReadFile(char* file){
             std::ifstream ShaderStream(file, std::ios::in);
             if(ShaderStream.is_open()){
@@ -208,17 +249,15 @@ namespace lit{
             vertShaderID = vertShader->getID();
             fragShaderID = fragShader->getID();
         }
+        virtual void Setup(){
 
+        }
         int GetUniformLocation(char* uni){
             return glGetUniformLocation(m_ID, uni);
         }
 
         void UseProgram(){
             glUseProgram(m_ID);
-        }
-
-        GLuint GetShaderID(){
-            return m_ID;
         }
 
     };
@@ -228,6 +267,9 @@ namespace lit{
     class LiteGL{
     private:
 
+
+    //TODO: Use a Hash table (map) instead of vectors. These objects need to be identifiable to be interchangeable
+
     /*
         WINDOW VARIABLES
     */
@@ -235,12 +277,28 @@ namespace lit{
     std::string m_WindowName;
     int m_WindowHeight;
     int m_WindowLength;
-    GLFWimage WindowIcon;
+    GLFWimage m_WindowIcon;
 
     /*
         TEXTURE VARIABLES
     */
-    std::vector<Texture> Textures;
+    std::vector<Texture> m_Textures;
+
+    /*
+        SHADER VARIABLES
+    */
+   std::vector<Shader> m_Shaders;
+   std::vector<ShaderProgram> m_ShaderPrograms;
+
+   /*
+        VERTEX ARRAY OBJECT VARIABLES
+   */
+    std::vector<VertexArrayObject> VAOs;
+
+    /*
+        VERTEX BUFFER OBJECT VARIABLES
+    */
+    std::vector<VertexArrayObject> VBOs;
    
 
 
@@ -256,8 +314,9 @@ namespace lit{
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        WindowIcon.pixels = stbi_load("LiteGLIcon.png", &WindowIcon.width, &WindowIcon.height, 0, 4);
-        glfwSetWindowIcon(m_Window, 1, &WindowIcon);
+        //This breaks on windows? Fix it.
+        //WindowIcon.pixels = stbi_load("LiteGLIcon.png", &WindowIcon.width, &WindowIcon.height, 0, 4);
+        //glfwSetWindowIcon(m_Window, 1, &WindowIcon);
 
          m_Window = glfwCreateWindow(wl, wh, name.c_str(), NULL, NULL);
 

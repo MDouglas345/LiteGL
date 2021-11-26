@@ -6,6 +6,8 @@ import platform
 plat = platform.system()
 
 env = Environment()
+
+
 env.Append(CPPFLAGS = ['-std=c++17'])
 if (plat == 'Darwin'):
     env['FRAMEWORKS'] = ['OpenGL']
@@ -15,7 +17,12 @@ if (plat == 'Darwin'):
 else:
     env.Append(CPPPATH = 'include')
     env.Append(LIBPATH = ['./libs/Debug'])
-    env.Append(LIBS = ['opengl32', 'glfw3', 'user32', 'gdi32', 'shell32', 'vcruntime', 'msvcrt'])
+    env.Append(LIBS = ['opengl32', 'glfw3', 'glew32sd', 'user32', 'gdi32', 'shell32', 'vcruntime', 'msvcrt'])
 
-t = env.Program(target = 'main', source =['main.cpp'])
+createStatic = ARGUMENTS.get('static', 0)
+t = 0
+if (createStatic):
+    t = env.StaticLibrary('LiteGL', ['LiteGL.cpp'])
+else:
+    t = env.Program(target = 'main', source =['main.cpp'])
 Default(t)
