@@ -74,8 +74,8 @@ void lit::VertexArrayObject::CreateVBO(GLenum BufferType, void* Data, size_t Dat
     CHECKERROR
 
     VertextAttributes VertAtt{
-        .BufferType = BufferType,
-        .BufferSize = DataSize,
+        VertAtt.BufferType = BufferType,
+        VertAtt.BufferSize = DataSize,
     };
 
     this->m_Attribs.push_back(VertAtt);
