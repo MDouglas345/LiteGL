@@ -13,9 +13,22 @@
     Meaning that a Mesh will contain vertex types (positions, normals, uvs, etc) and the VBOs will be created accordingly.
     The VAOs will follow suite, meaning that there is an implicit compatibility check between the VAO and the current shader to be used.
 
+    APPENDUM:
+    Obviously, the mesh dictates the shader! It will most likely have a matrial object that dictates the textures and shader to use!
 */
 
-//TODO : Convert this whole summa into a .h and .cpp file. For Static Libary purposes.
+//TODO : Convert this whole summa into a .h and .cpp file. For Static Libary purposes. UPDATE : Done? When including the LiteGL library, inclde 
+// #define STB_IMAGE_IMPLEMENTATION
+// in the main application .cpp file
+
+
+/*
+    New structure plan! Abstract away the VBO! Only interface through the VAO in order to create VBOs and describe them.
+*/
+
+/*
+    Prepare for a massive restructure when you want to use Vulkan *dark moon*
+*/
 
 #ifndef LITEGL_H
 #define LITEGL_H
@@ -30,8 +43,15 @@
 #include <iostream>
 #include <fstream>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <glm/glm.hpp>
+
+
+#ifdef DEBUG
+#define CHECKERROR CheckError(__FILE__ , __LINE__);
+#else 
+#define CHECKERROR 
+#endif
 
 
 namespace lit{
@@ -39,6 +59,25 @@ namespace lit{
      inline void ExitGracefully(const char* text){
         std::cout << text << std::endl;
         glfwTerminate();
+    }
+
+    inline void CheckError(char* file, int line){
+        GLenum err;
+        while ((err = glGetError()) != GL_NO_ERROR){
+            std::string error;
+            switch(err){
+                case GL_INVALID_ENUM: error = "GL_Invalid_Enum";break;
+                case GL_INVALID_VALUE: error = "GL_Invalid_Value";break;
+                case GL_INVALID_OPERATION: error = "GL_Invalid_Operation";break;
+                case GL_STACK_OVERFLOW: error = "GL_Stack_Overflow";break;
+                case GL_STACK_UNDERFLOW: error = "GL_Stack_Underflow";break;
+                case GL_OUT_OF_MEMORY: error = "GL_Out_Of_Memory"; break;
+                case GL_INVALID_FRAMEBUFFER_OPERATION: error = "GL_Invalid_Framebuffer_Operation";break;
+                case GL_CONTEXT_LOST: error = "GL_Context_Lost"; break;
+                case GL_TABLE_TOO_LARGE: error = "GL_Table_Too_Large"; break;
+            }
+            std::cout << "GL Error : " << error << " in file : " << file << " at line : " << line << "\n";
+        }
     }
 
     class GLobject{
@@ -51,55 +90,61 @@ namespace lit{
     };
 
     class VertexBufferObject : public GLobject{
-        protected:
+        private:
             GLenum m_DrawType;
+            GLenum m_BufferType;
             void* m_Data;
             size_t m_Stride;
-            unsigned int m_DataType;
+            unsigned int m_DrawMode;
+            size_t m_BufferSize;
+            size_t m_ElementCount;
+            GLuint m_ElementType;
+            GLenum m_DataType;
+
         public:
-            VertexBufferObject() : GLobject(){
-                glGenBuffers(1, &m_ID);
-            }
 
-        void AssignData(size_t BufferSize, size_t stride, unsigned int DataType, void* Data){
-            BindVBO();
-            glBufferData(GL_ARRAY_BUFFER, BufferSize, Data, m_DrawType);
-            m_Data = Data;
-            m_Stride = stride;
-            m_DataType = DataType;
-        }
+        VertexBufferObject();
 
-        void BindVBO(){
-            glBindBuffer(GL_ARRAY_BUFFER, m_ID);
-        }
+        void AssignData(GLenum BufferType, size_t BufferSize,  GLenum DrawMode, void* Data);
 
-        size_t getStride(){
-            return m_Stride;
-        }
+        void BindVBO();
 
-        unsigned int getDataType(){
-            return m_DataType;
-        }
+        size_t getStride();
+
+        size_t getBufferSize();
+
+        GLenum getDataType();
+    };
+
+    struct VertextAttributes{
+        GLenum BufferType;
+        size_t BufferSize;
+        GLenum DataType;
+        size_t ElementsPerVertex;
+        size_t Stride;
+        size_t Offset;
     };
 
     class VertexArrayObject : public GLobject{
         private:
-            std::vector<size_t> Attribs;
+            size_t m_AttribCount;
+            std::vector<VertexBufferObject> m_VBOS;
+            std::vector<VertextAttributes> m_Attribs;
+            VertextAttributes* CurrentAttributes;
+            VertexBufferObject* CurrentBuffer;
         public:
-            VertexArrayObject() : GLobject(){
-             glGenVertexArrays(1, &m_ID);
-            }
         
-        void AssignVBO(size_t index, VertexBufferObject* Buffer){
-            BindVAO();
-            Buffer->BindVBO();
-            glVertexAttribPointer(index, Buffer->getStride(), Buffer->getDataType(), GL_FALSE, 0, NULL);
-            Attribs.push_back(index);
-        }
+        VertexArrayObject();
+        
+        void AssignVBO(VertexBufferObject* Buffer);
 
-        void BindVAO(){
-            glBindVertexArray(m_ID);
-        }
+        void DescribeVBO(GLenum DataType, size_t ElemsPerVert, size_t stride, size_t Offset);
+
+        void CreateVBO(GLenum BufferType, void* Data, size_t DataSize, GLenum AccessMode);
+
+        GLuint getCurrentBufferID();
+
+        void BindVAO();
     };
 
 
@@ -109,32 +154,7 @@ namespace lit{
             unsigned char* m_Data;
             std::string Name;
         public:
-            Texture(std::string FileLoc, std::string localname) : GLobject(), Name(localname){
-                glGenTextures(1, &m_ID);
-                glBindTexture(GL_TEXTURE_2D, m_ID);
-
-                /*
-                    Need to add texture customizability, either through functions or inheritance
-                */
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-                m_Data = stbi_load(FileLoc.c_str(), &m_Width, &m_Height, &nrChannels, 0);
-
-                if (m_Data){
-                    /*
-                        Lots can be worked on for customizability!!!
-                    */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, m_Data);
-                }
-                else{
-                    std::string exit = "Failed to load Texture ";
-                    exit += localname;
-                    ExitGracefully(exit.c_str());
-                }
-            }
+            Texture(std::string FileLoc, std::string localname);
     };
     
     namespace obj{
@@ -146,39 +166,17 @@ namespace lit{
             std::string Name;
             std::string ShaderCode;
         public:
-            Shader(char* fileloc, std::string localname) : GLobject(), Name(localname){
-                ReadFile(fileloc);
-            
-            }
-        void ReadFile(char* file){
-            std::ifstream ShaderStream(file, std::ios::in);
-            if(ShaderStream.is_open()){
-                std::stringstream sstr;
-                sstr << ShaderStream.rdbuf();
-                ShaderCode = sstr.str();
-                ShaderStream.close();
-	        }else{
-                printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", file);
-                getchar();
-		        return ;
-	        }
+            Shader(char* fileloc, std::string localname);
 
-        }
+        void ReadFile(char* file);
 
-        void VerifyShader(){
-            GLint Result = GL_FALSE;
-            int InfoLogLength;
+        void InternalShaderSetup(char* source);
 
-            glGetShaderiv(m_ID, GL_COMPILE_STATUS, &Result);
-	        glGetShaderiv(m_ID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	        if ( InfoLogLength > 0 ){
-		        std::vector<char> ShaderErrorMessage(InfoLogLength+1);
-		        glGetShaderInfoLog(m_ID, InfoLogLength, NULL, &ShaderErrorMessage[0]);
-		        printf("%s\n", &ShaderErrorMessage[0]);
-	        }
-        }
+        void VerifyShader();
 
         virtual void CompileShader () = 0;
+
+        virtual ~Shader(){}
     };
 
     /*
@@ -186,44 +184,26 @@ namespace lit{
     */
     class VertexShader : public Shader{
         public:
-        VertexShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-            CompileShader();
-            VerifyShader();
-        }
-        void CompileShader() override{
-            m_ID = glCreateShader(GL_VERTEX_SHADER);
-            char const * ShaderSourcePointer = ShaderCode.c_str();
-            glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
-            glCompileShader(m_ID);
-        }
+
+        VertexShader(char* fileloc, std::string localname);
+
+        void CompileShader() override;
     };
 
     class FragmentShader : public Shader{
         public:
-        FragmentShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-            CompileShader();
-            VerifyShader();  
-        }
-         void CompileShader() override{
-             m_ID = glCreateShader(GL_FRAGMENT_SHADER);
-            char const * ShaderSourcePointer = ShaderCode.c_str();
-            glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
-            glCompileShader(m_ID);
-        }
+
+        FragmentShader(char* fileloc, std::string localname);
+
+         void CompileShader() override;
     };
 
     class ComputeShader : public Shader{
         public:
-        ComputeShader(char* fileloc, std::string localname) : Shader(fileloc, localname){
-            CompileShader();
-            VerifyShader();
-        }
-         void CompileShader() override{
-            m_ID = glCreateShader(GL_COMPUTE_SHADER);
-            char const * ShaderSourcePointer = ShaderCode.c_str();
-            glShaderSource(m_ID, 1, &ShaderSourcePointer, NULL);
-            glCompileShader(m_ID);
-        }
+
+        ComputeShader(char* fileloc, std::string localname);
+
+         void CompileShader() override;
     };
 
     class ShaderProgram : public GLobject{
@@ -233,31 +213,16 @@ namespace lit{
         FragmentShader*  fragShader;
 
         public:
-        ShaderProgram(GLuint vert, GLuint frag) : GLobject(){
-            m_ID = glCreateProgram();
-            glAttachShader(m_ID, vert);
-            glAttachShader(m_ID, frag);
-            glLinkProgram(m_ID);
-        }
-        ShaderProgram(char* vertexshader, char* fragementshader){
-            m_ID = glCreateProgram();
-            vertShader = new VertexShader(vertexshader, "vert");
-            fragShader = new FragmentShader(fragementshader, "frag");
 
-            vertShaderID = vertShader->getID();
-            fragShaderID = fragShader->getID();
-        }
-        virtual void Setup(){
+        ShaderProgram(GLuint vert, GLuint frag);
 
-        }
-        int GetUniformLocation(char* uni){
-            return glGetUniformLocation(m_ID, uni);
-        }
+        ShaderProgram(char* vertexshader, char* fragementshader);
 
-        void UseProgram(){
-            glUseProgram(m_ID);
-        }
+        virtual void Setup(){}
 
+        int GetUniformLocation(char* uni);
+
+        void UseProgram();
     };
 
    
@@ -285,7 +250,9 @@ namespace lit{
     /*
         SHADER VARIABLES
     */
-   std::vector<Shader> m_Shaders;
+   std::vector<VertexShader> m_VertShaders;
+   std::vector<FragmentShader> m_FragShaders;
+   std::vector<ComputeShader> m_ComputeShaders;
    std::vector<ShaderProgram> m_ShaderPrograms;
 
    /*
@@ -296,57 +263,37 @@ namespace lit{
     /*
         VERTEX BUFFER OBJECT VARIABLES
     */
-    std::vector<VertexArrayObject> VBOs;
+    std::vector<VertexBufferObject> VBOs;
    
 
 
     public:
-    LiteGL(std::string name, size_t wl, size_t wh) : m_WindowHeight(wh), m_WindowLength(wl){
-        if (!glfwInit()){
-            std::cout << "Failed to init GLFW, nothing will continue./n";
-            return;
-        }
-        
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        //This breaks on windows? Fix it.
-        //WindowIcon.pixels = stbi_load("LiteGLIcon.png", &WindowIcon.width, &WindowIcon.height, 0, 4);
-        //glfwSetWindowIcon(m_Window, 1, &WindowIcon);
+    LiteGL(std::string name, size_t wl, size_t wh);
 
-         m_Window = glfwCreateWindow(wl, wh, name.c_str(), NULL, NULL);
+    bool ShouldWindowClose();
 
-         if (!m_Window){
-             ExitGracefully("Failed to get Window running!");
-         }
+    void SwapFrameBuffers();
 
-         glfwMakeContextCurrent(m_Window);
+    void PollEvents();
 
-        glewExperimental = GL_TRUE;
-        glewInit();
-    }
+    void ClearScreen();
 
-    bool ShouldWindowClose(){
-        return glfwWindowShouldClose(m_Window);
-    }
+    void EndRenderer();
 
-    void SwapFrameBuffers(){
-        glfwSwapBuffers(m_Window);
-    }
 
-    void PollEvents(){
-         glfwPollEvents();
-    }
+    lit::VertexArrayObject& CreateVAO();
 
-    void ClearScreen(){
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
+    lit::VertexBufferObject& CreateVBO();
 
-    void EndRenderer(){
-        glfwTerminate();
-    }
+    lit::VertexShader& CreateVertexShader(char* source);
+
+    lit::FragmentShader& CreateFragmentShader(char* source);
+
+    lit::ComputeShader& CreateComputeShader(char* source);
+
+    lit::ShaderProgram& CreateShaderProgram(lit::VertexShader& vert, lit::FragmentShader& frag);
+
 
     };
 
