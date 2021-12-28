@@ -6,9 +6,10 @@ import platform
 plat = platform.system()
 
 env = Environment()
+env.SCONS_CXX_STANDARD = 'c++17'
+#env['CC'] = 'g++'
 
-
-env.Append(CPPFLAGS = ['-std=c++17'])
+#env.Append(CPPFLAGS = ['-std=c++17'])
 
 if (plat == 'Darwin'):
     env['FRAMEWORKS'] = ['OpenGL']
