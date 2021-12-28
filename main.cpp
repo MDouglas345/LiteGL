@@ -12,6 +12,12 @@ glm::vec3 Mesh[] = {
     glm::vec3(0.5, -0.5,0)
 };
 
+glm::vec3 Colors[] = {
+    glm::vec3(0.9,0.2,0.2),
+    glm::vec3(0.4,0.8,0.9),
+    glm::vec3(0.2,0.15,0.6)
+};
+
 
 void init(lit::LiteGL& renderer){
     /*
@@ -36,6 +42,14 @@ void init(lit::LiteGL& renderer){
     VAO.DescribeVBO(GL_FLOAT, 3, 0, 0);
     std::cout << "Described the current VBO to the VAO\n";
     CHECKERROR
+
+
+    VAO.CreateVBO(GL_ARRAY_BUFFER, Colors, sizeof(Colors), GL_STATIC_DRAW);
+    CHECKERROR
+
+    VAO.DescribeVBO(GL_FLOAT, 3, 0, 0);
+    CHECKERROR
+
     /*
         Compile Vertex Shader
     */
@@ -66,7 +80,7 @@ void init(lit::LiteGL& renderer){
 int main(void)
 {
     
-    lit::LiteGL Renderer("Test Window", 1280, 720);
+    lit::LiteGL Renderer("Test Window", 640, 480);
     CHECKERROR
 
     init(Renderer);

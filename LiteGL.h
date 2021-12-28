@@ -15,6 +15,12 @@
 
     APPENDUM:
     Obviously, the mesh dictates the shader! It will most likely have a matrial object that dictates the textures and shader to use!
+
+    APPENDUM 2:
+    Ok so, some changes to the philosophy. The VAO takes care of everything VBO related since the VAO is essentially a descriptor, it might as well
+    control the VBO entirely.
+    The core is still the same, however; The Mesh dictates the Material, the material stores Shader, Texture and VAO setup. How to include these unique things into the Mesh data?
+    That is for future Michael to figure out.
 */
 
 //TODO : Convert this whole summa into a .h and .cpp file. For Static Libary purposes. UPDATE : Done? When including the LiteGL library, inclde 
@@ -28,6 +34,14 @@
 
 /*
     Prepare for a massive restructure when you want to use Vulkan *dark moon*
+*/
+
+/*
+    Theres lots of redundant data/functions due to the trial and error of how these objects are structured! Look into the VBO since VertexAttributes exists. Lots of wasted memory
+*/
+
+/*
+    NICE TO HAVE ! (In the plans for the future) Look into glBufferSubData! Great for modifying data on the GPU on the fly. Requires a buffer to be GL_DYNAMIC_*
 */
 
 #ifndef LITEGL_H
@@ -46,6 +60,7 @@
 #include "stb_image.h"
 #include <glm/glm.hpp>
 
+//#define DEBUG
 
 #ifdef DEBUG
 #define CHECKERROR CheckError(__FILE__ , __LINE__);

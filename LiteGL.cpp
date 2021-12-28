@@ -91,7 +91,7 @@ void lit::VertexArrayObject::DescribeVBO(GLenum DataType, size_t ElemsPerVert, s
 
     glVertexAttribPointer(this->m_Attribs.size()-1, CurrentAttributes->ElementsPerVertex, CurrentAttributes->DataType, GL_FALSE, CurrentAttributes->Stride, (void*)CurrentAttributes->Offset);
     CHECKERROR
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(this->m_Attribs.size()-1);
 }
 
 
@@ -237,8 +237,8 @@ lit::LiteGL:: LiteGL(std::string name, size_t wl, size_t wh) : m_WindowHeight(wh
             return;
         }
         
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
