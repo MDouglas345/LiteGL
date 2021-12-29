@@ -51,6 +51,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <memory>
+#include <map>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -198,11 +199,14 @@ namespace lit{
         Should make an automated uniform detection
     */
     class VertexShader : public Shader{
+        private:
+            std::map<std::string, GLuint> m_Uniforms;
+            std::map<std::string, GLuint>::iterator m_It;
         public:
 
-        VertexShader(char* fileloc, std::string localname);
+            VertexShader(char* fileloc, std::string localname);
 
-        void CompileShader() override;
+            void CompileShader() override;
     };
 
     class FragmentShader : public Shader{
@@ -227,6 +231,9 @@ namespace lit{
         VertexShader* vertShader;
         FragmentShader*  fragShader;
 
+        std::map<std::string, GLuint> m_Uniforms;
+        std::map<std::string, GLuint>::iterator m_IT;
+
         public:
 
         ShaderProgram(GLuint vert, GLuint frag);
@@ -236,6 +243,10 @@ namespace lit{
         virtual void Setup(){}
 
         int GetUniformLocation(char* uni);
+
+        bool SetUniform(char* uniform, void* source);
+
+        void AddUniform(char* uniform);
 
         void UseProgram();
     };

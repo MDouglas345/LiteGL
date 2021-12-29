@@ -225,6 +225,11 @@ int lit::ShaderProgram::GetUniformLocation(char* uni){
             return glGetUniformLocation(m_ID, uni);
         }
 
+void lit::ShaderProgram::AddUniform(char* uniform){
+    GLuint ID = GetUniformLocation(uniform);
+    m_Uniforms.insert(std::make_pair(std::string(uniform), ID));
+}
+
 void lit::ShaderProgram::UseProgram(){
             glUseProgram(m_ID);
         }
