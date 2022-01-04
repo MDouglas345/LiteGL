@@ -3,5 +3,5 @@ Just a simple wrapper that objectifies common graphics elements for ease of use 
 This is the foundation of something else that will utilize these functionalities.
 Currently only supports OpenGL.
 
-#Goals
+# Goals
 Create a better interface so that extended to Vulkan is easy
